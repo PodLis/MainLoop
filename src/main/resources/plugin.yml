@@ -1,0 +1,27 @@
+name: MainLoop
+version: ${project.version}
+main: com.gmail.thewarzealot.mainloop.MainLoop
+api-version: 1.13
+prefix: MainLoop
+authors: [Rosenboum]
+description: Plugin which create a main loop for hubs
+website: hubsmc.ru
+
+commands:
+  mainloop:
+    description: The main command for MainLoop
+    usage: <command>
+    aliases: [ml]
+
+permissions:
+  mainloop.*:
+    description: Gives access to all MainLoop permissions.
+    children:
+      mainloop.reload: true
+      mainloop.test: true
+  mainloop.reload:
+    description: Reload the config files.
+    default: false
+  mainloop.test:
+    description: Testing command.
+    default: false

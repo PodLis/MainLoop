@@ -1,0 +1,51 @@
+
+# Boss-bars ^_^
+boss-bars:
+
+  # The delay with which boss-bars are changed (in seconds)
+  delay: 60
+
+  # The number of boss-bars
+  number-of: 2
+
+  # IMPORTANT: each boss-bar must have a numerical ID from 1 to the total number of bars
+  # (which is defined in the field above)
+  # If you break this rule, you will get rak jyoppi
+  #
+  # Possible color options:
+  # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+  #
+  # Possible segmented options:
+  # SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20, SOLID
+  #
+  # Possible progress options:
+  # real number from 0 to 1
+
+  1:
+    color: BLUE
+    segmented: SEGMENTED_6
+    progress: 1
+    text: '&6&lHello'
+
+  2:
+    color: RED
+    segmented: SEGMENTED_20
+    progress: 0.228
+    text: '&0&lGoodbye'
+
+periodic-feed:
+  delay: 60
+  cmd-to-console: 'ecofeed'
+  cmd-to-player: 'tablo'
+
+mysql:
+  use: false
+  host: localhost
+  port: 3306
+  database: minecraft
+  table: PLAYERDATA
+  username: Minecraft
+  password: pass123
+
+# DO NOT CHANGE THIS!
+config-version: 1

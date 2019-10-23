@@ -5,7 +5,7 @@ boss-bars:
   # The delay with which boss-bars are changed (in seconds)
   delay: 60
 
-  # The number of boss-bars
+  # The number of boss-bars (NOT ZERO)
   number-of: 2
 
   # IMPORTANT: each boss-bar must have a numerical ID from 1 to the total number of bars
@@ -33,6 +33,47 @@ boss-bars:
     progress: 0.228
     text: '&0&lGoodbye'
 
+# Action-bars O_o
+action-bars:
+
+  # The delay with which action-bars are displayed (in seconds)
+  delay: 2
+
+  # The number of action-bars (NOT ZERO)
+  number-of: 2
+
+  # IMPORTANT: each action-bar must have a numerical ID from 1 to the total number of bars
+  # (which is defined in the field above)
+  # If you break this rule, you will get speed yaichnika
+  #
+  # Possible color options:
+  # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+
+  1:
+    text: 'kek'
+
+  2:
+    text: 'lol'
+
+# Chat messages X_X
+chat-messages:
+
+  # The delay with which messages are printed in chat (in seconds)
+  delay: 2
+
+  # The number of messages (NOT ZERO)
+  number-of: 2
+
+  # IMPORTANT: each message must have a numerical ID from 1 to the total number of messages
+  # (which is defined in the field above)
+  # If you break this rule, you will get infarkt panosa
+
+  1:
+    text: 'ds'
+
+  2:
+    text: 'vk'
+
 periodic-feed:
   delay: 60
   cmd-to-console: 'ecofeed'
@@ -48,4 +89,4 @@ mysql:
   password: pass123
 
 # DO NOT CHANGE THIS!
-config-version: 1
+config-version: 2

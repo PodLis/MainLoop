@@ -1,5 +1,6 @@
 package com.gmail.thewarzealot.mainloop;
 
+import com.gmail.thewarzealot.mainloop.api.ActionBar;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -15,22 +16,23 @@ import java.util.logging.Level;
 
 public class MainLoop extends JavaPlugin {
 
-    private char bar_counter;
     private char loop_counter;
+    private char bossBar_counter;
+    private char actionBar_counter;
+    private char chatMessage_counter;
 
     private FileConfiguration config;
     private File file;
     private BukkitScheduler scheduler;
-    //private Connection connection;
 
-    private BossBar[] bars;
+    private BossBar[] bossBars;
+    private ActionBar[] actionBars;
+    private String[] chatMessages;
 
     @Override
     public void onEnable() {
 
         loadFiles();
-
-        //connectSql();
 
         try {
             Commands cmds = new Commands(this);
@@ -50,8 +52,6 @@ public class MainLoop extends JavaPlugin {
     @Override
     public void onDisable() {
 
-        //disconnectSql();
-
         try {
             cancelTask();
             logConsole("Successfully disabled.");
@@ -62,23 +62,42 @@ public class MainLoop extends JavaPlugin {
     }
 
     void startTask() {
+
         loop_counter = 0;
-        int bar_mark = config.getInt("boss-bars.delay");
+        bossBar_counter = Character.MAX_VALUE;
+        actionBar_counter = Character.MAX_VALUE;
+        chatMessage_counter = Character.MAX_VALUE;
+
+        int bossBar_mark = config.getInt("boss-bars.delay");
+        int actionBar_mark = config.getInt("action-bars.delay");
+        int chatMessage_mark = config.getInt("chat-messages.delay");
         int feed_mark = config.getInt("periodic-feed.delay");
 
         String console_command = config.getString("periodic-feed.cmd-to-console");
         String player_command = config.getString("periodic-feed.cmd-to-player");
 
-        determineBars();
-        bar_counter = Character.MAX_VALUE;
+        determineBarsAndMessages();
 
         scheduler.scheduleSyncRepeatingTask(this, () -> {
 
-            if (loop_counter % bar_mark == 0) {
-                bars[bar_counter % bars.length].removeAll();
-                bar_counter++;
+            if (loop_counter % bossBar_mark == 0) {
+                bossBars[bossBar_counter % bossBars.length].removeAll();
+                bossBar_counter++;
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    bars[bar_counter % bars.length].addPlayer(p);
+                    bossBars[bossBar_counter % bossBars.length].addPlayer(p);
+                }
+            }
+            if (loop_counter % actionBar_mark == 0) {
+                actionBar_counter++;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    actionBars[actionBar_counter % actionBars.length].send(p);
+                }
+            }
+
+            if (loop_counter % chatMessage_mark == 0) {
+                chatMessage_counter++;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    p.sendMessage(chatMessages[chatMessage_counter % actionBars.length]);
                 }
             }
 
@@ -95,20 +114,28 @@ public class MainLoop extends JavaPlugin {
     }
 
     void cancelTask() {
-        for (BossBar bar : bars) {
+        for (BossBar bar : bossBars) {
             bar.removeAll();
         }
         scheduler.cancelTasks(this);
     }
 
-    private void determineBars() {
-        bars = new BossBar[config.getInt("boss-bars.number-of")];
-        for (int i = 1; i <= bars.length; i++) {
-            bars[i-1] = getServer().createBossBar(
-                    replaceColor(config.getString("boss-bars." + i + ".text")),
+    private void determineBarsAndMessages() {
+        bossBars = new BossBar[config.getInt("boss-bars.number-of")];
+        actionBars = new ActionBar[config.getInt("action-bars.number-of")];
+        chatMessages = new String[config.getInt("chat-messages.number-of")];
+        for (int i = 1; i <= bossBars.length; i++) {
+            bossBars[i-1] = getServer().createBossBar(
+                    replaceSymbolsAndNull(config.getString("boss-bars." + i + ".text")),
                     BarColor.valueOf(config.getString("boss-bars." + i + ".color")),
                     BarStyle.valueOf(config.getString("boss-bars." + i + ".segmented")));
-            bars[i-1].setProgress(config.getDouble("boss-bars." + i + ".progress"));
+            bossBars[i-1].setProgress(config.getDouble("boss-bars." + i + ".progress"));
+        }
+        for (int i = 1; i <= actionBars.length; i++) {
+            actionBars[i-1] = new ActionBar(replaceSymbolsAndNull(config.getString("action-bars." + i + ".text")));
+        }
+        for (int i = 1; i <= chatMessages.length; i++) {
+            chatMessages[i-1] = replaceSymbolsAndNull(config.getString("chat-messages." + i + ".text"));
         }
     }
 
@@ -171,6 +198,44 @@ public class MainLoop extends JavaPlugin {
         }
     }*/
 
+
+                    /*p.sendMessage(rawBlock.toString());
+                    String msg = rawBlock.toString();
+                    try {
+                        try {
+                            Class.forName("org.spigotmc.SpigotConfig");
+
+                            BaseComponent[] bc = ComponentSerializer.parse(msg);
+                            p.spigot().sendMessage(bc);
+                        } catch (ClassNotFoundException e) {
+                            String ver = Bukkit.getServer().getClass().getPackage().getName().replace(".", ",")
+                                    .split(",")[3];
+                            Object parsedMessage = Class
+                                    .forName("net.minecraft.server." + ver + ".IChatBaseComponent$ChatSerializer")
+                                    .getMethod("a", new Class[] { String.class }).invoke(null, new Object[] {
+                                            org.bukkit.ChatColor.translateAlternateColorCodes("&".charAt(0), msg) });
+                            Object packetPlayOutChat = Class.forName("net.minecraft.server." + ver + ".PacketPlayOutChat")
+                                    .getConstructor(new Class[] {
+                                            Class.forName("net.minecraft.server." + ver + ".IChatBaseComponent") })
+                                    .newInstance(new Object[] { parsedMessage });
+
+                            Object craftPlayer = Class.forName("org.bukkit.craftbukkit." + ver + ".entity.CraftPlayer")
+                                    .cast(p);
+                            Object craftHandle = Class.forName("org.bukkit.craftbukkit." + ver + ".entity.CraftPlayer")
+                                    .getMethod("getHandle", new Class[0]).invoke(craftPlayer, new Object[0]);
+                            Object playerConnection = Class.forName("net.minecraft.server." + ver + ".EntityPlayer")
+                                    .getField("playerConnection").get(craftHandle);
+
+                            Class.forName("net.minecraft.server." + ver + ".PlayerConnection")
+                                    .getMethod("sendPacket",
+                                            new Class[] { Class.forName("net.minecraft.server." + ver + ".Packet") })
+                                    .invoke(playerConnection, new Object[] { packetPlayOutChat });
+                        }
+                    } catch (Throwable e) {
+                        logConsole(Level.WARNING, "Invalid JSON format: " + msg);
+                        return;
+                    }*/
+
     private File getFolder() {
         File folder = getDataFolder();
         if (!folder.exists()) {
@@ -187,7 +252,7 @@ public class MainLoop extends JavaPlugin {
         Bukkit.getLogger().log(level, "[MainLoop] " + message);
     }
 
-    private String replaceColor(String s) {
-        return s.replace("&", "\u00a7");
+    private String replaceSymbolsAndNull(String s) {
+        return s != null ? s.replace("&", "\u00a7") : "";
     }
 }

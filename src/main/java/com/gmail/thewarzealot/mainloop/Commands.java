@@ -67,6 +67,7 @@ public class Commands implements CommandExecutor, TabCompleter {
         } catch (Throwable e) {
             e.printStackTrace();
             plugin.logConsole(Level.WARNING, "Some troubles with commands.");
+            plugin.logConsole("oops...");
         }
         return true;
     }

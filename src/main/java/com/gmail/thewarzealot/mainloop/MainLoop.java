@@ -1,17 +1,18 @@
 package com.gmail.thewarzealot.mainloop;
 
-import com.gmail.thewarzealot.mainloop.api.ActionBar;
+import com.gmail.thewarzealot.mainloop.api.*;
+import com.gmail.thewarzealot.mainloop.util.ConfigUtilities;
+import com.gmail.thewarzealot.mainloop.util.JsonConverter;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.logging.Level;
 
 public class MainLoop extends JavaPlugin {
@@ -21,13 +22,16 @@ public class MainLoop extends JavaPlugin {
     private char actionBar_counter;
     private char chatMessage_counter;
 
-    private FileConfiguration config;
+    private FileConfiguration configuration;
     private File file;
     private BukkitScheduler scheduler;
 
-    private BossBar[] bossBars;
-    private ActionBar[] actionBars;
-    private String[] chatMessages;
+    private ArrayList<HubsBar> bossBars;
+    private ArrayList<ActionBar> actionBars;
+    private ArrayList<ChatMessage> chatMessages;
+
+    private PlayerCommand playerFeedCommand;
+    private String consoleFeedCommand;
 
     @Override
     public void onEnable() {
@@ -59,6 +63,7 @@ public class MainLoop extends JavaPlugin {
             e.printStackTrace();
             logConsole(Level.WARNING, "There was an error.");
         }
+
     }
 
     void startTask() {
@@ -68,75 +73,107 @@ public class MainLoop extends JavaPlugin {
         actionBar_counter = Character.MAX_VALUE;
         chatMessage_counter = Character.MAX_VALUE;
 
-        int bossBar_mark = config.getInt("boss-bars.delay");
-        int actionBar_mark = config.getInt("action-bars.delay");
-        int chatMessage_mark = config.getInt("chat-messages.delay");
-        int feed_mark = config.getInt("periodic-feed.delay");
+        int bossBar_mark = configuration.getInt("boss-bars.delay");
+        int actionBar_mark = configuration.getInt("action-bars.delay");
+        int chatMessage_mark = configuration.getInt("chat-messages.delay");
+        int feed_mark = configuration.getInt("periodic-feed.delay");
 
-        String console_command = config.getString("periodic-feed.cmd-to-console");
-        String player_command = config.getString("periodic-feed.cmd-to-player");
-
-        determineBarsAndMessages();
+        determineAll();
 
         scheduler.scheduleSyncRepeatingTask(this, () -> {
 
             if (loop_counter % bossBar_mark == 0) {
-                bossBars[bossBar_counter % bossBars.length].removeAll();
+                bossBars.get(bossBar_counter % bossBars.size()).clean();
                 bossBar_counter++;
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    bossBars[bossBar_counter % bossBars.length].addPlayer(p);
-                }
+                bossBars.get(bossBar_counter % bossBars.size()).send(Bukkit.getOnlinePlayers());
             }
             if (loop_counter % actionBar_mark == 0) {
                 actionBar_counter++;
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    actionBars[actionBar_counter % actionBars.length].send(p);
-                }
+                actionBars.get(actionBar_counter % actionBars.size()).send(Bukkit.getOnlinePlayers());
             }
 
             if (loop_counter % chatMessage_mark == 0) {
                 chatMessage_counter++;
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.sendMessage(chatMessages[chatMessage_counter % actionBars.length]);
-                }
+                chatMessages.get(chatMessage_counter % chatMessages.size()).send(Bukkit.getOnlinePlayers());
             }
 
             if (loop_counter % feed_mark == 0) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), console_command);
-                for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.performCommand(player_command);
-                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), consoleFeedCommand);
+                playerFeedCommand.send(Bukkit.getOnlinePlayers());
             }
 
             loop_counter++;
 
         }, 0L, 20L);
+
     }
 
     void cancelTask() {
-        for (BossBar bar : bossBars) {
-            bar.removeAll();
+
+        for (HubsBar bar : bossBars) {
+            bar.clean();
         }
         scheduler.cancelTasks(this);
+
     }
 
-    private void determineBarsAndMessages() {
-        bossBars = new BossBar[config.getInt("boss-bars.number-of")];
-        actionBars = new ActionBar[config.getInt("action-bars.number-of")];
-        chatMessages = new String[config.getInt("chat-messages.number-of")];
-        for (int i = 1; i <= bossBars.length; i++) {
-            bossBars[i-1] = getServer().createBossBar(
-                    replaceSymbolsAndNull(config.getString("boss-bars." + i + ".text")),
-                    BarColor.valueOf(config.getString("boss-bars." + i + ".color")),
-                    BarStyle.valueOf(config.getString("boss-bars." + i + ".segmented")));
-            bossBars[i-1].setProgress(config.getDouble("boss-bars." + i + ".progress"));
+    private void determineAll() {
+
+        //feeding
+        consoleFeedCommand = configuration.getString("periodic-feed.cmd-to-console");
+        playerFeedCommand = new PlayerCommand(configuration.getString("periodic-feed.cmd-to-player"));
+
+        //boss-bars
+        String[] bossTexts = ConfigUtilities.getStrings(configuration.getConfigurationSection("boss-bars.bars"), "text");
+        String[] bossColors = ConfigUtilities.getStrings(configuration.getConfigurationSection("boss-bars.bars"), "color");
+        String[] bossStyles = ConfigUtilities.getStrings(configuration.getConfigurationSection("boss-bars.bars"), "segmented");
+        double[] bossProgresses = ConfigUtilities.getDoubles(configuration.getConfigurationSection("boss-bars.bars"), "progress");
+        bossBars = new ArrayList<>();
+        for (int i = 0; i < bossTexts.length; i++) {
+            bossBars.add(new HubsBar(this,
+                    replaceSymbolsAndNull(bossTexts[i]),
+                    BarColor.valueOf(bossColors[i]),
+                    BarStyle.valueOf(bossStyles[i]),
+                    bossProgresses[i]));
         }
-        for (int i = 1; i <= actionBars.length; i++) {
-            actionBars[i-1] = new ActionBar(replaceSymbolsAndNull(config.getString("action-bars." + i + ".text")));
+
+        //action-bars
+        String[] actionTexts = ConfigUtilities.getStrings(configuration.getConfigurationSection("action-bars.bars"), "text");
+        actionBars = new ArrayList<>();
+        for (String text : actionTexts) {
+            actionBars.add(new ActionBar(replaceSymbolsAndNull(text)));
         }
-        for (int i = 1; i <= chatMessages.length; i++) {
-            chatMessages[i-1] = replaceSymbolsAndNull(config.getString("chat-messages." + i + ".text"));
+
+        //chat-messages
+        String[][] chatTexts = ConfigUtilities.getArrayOfStrings(configuration.getConfigurationSection("chat-messages.messages"), "text");
+        boolean[] chatIsJson = ConfigUtilities.getBooleans(configuration.getConfigurationSection("chat-messages.messages"), "raw");
+        JsonConverter.setHoversExecutes(
+                ConfigUtilities.getStringsAndKeys(configuration.getConfigurationSection("chat-messages.hover"))[0],
+                ConfigUtilities.getStringsAndKeys(configuration.getConfigurationSection("chat-messages.hover"))[1],
+                ConfigUtilities.getStringsAndKeys(configuration.getConfigurationSection("chat-messages.execute"))[0],
+                ConfigUtilities.getStringsAndKeys(configuration.getConfigurationSection("chat-messages.execute"))[1]
+        );
+        chatMessages = new ArrayList<>();
+        for (int i = 0; i < chatTexts.length; i++) {
+            if (chatIsJson[i]) {
+
+                String[] strings = new String[chatTexts[i].length];
+                for (int j = 0; j < chatTexts[i].length; j++) {
+                    strings[j] = replaceSymbolsAndNull(JsonConverter.getJsonString(chatTexts[i][j]));
+                }
+                chatMessages.add(new RawMessage(strings)); //Hover-Click-able messages
+
+            } else {
+
+                String[] strings = new String[chatTexts[i].length];
+                for (int j = 0; j < chatTexts[i].length; j++) {
+                    strings[j] = replaceSymbolsAndNull(chatTexts[i][j]);
+                }
+                chatMessages.add(new ChatMessage(strings)); //Simple-text messages
+
+            }
         }
+
     }
 
     void loadFiles() {
@@ -146,12 +183,12 @@ public class MainLoop extends JavaPlugin {
             }
 
             if (file.exists()) {
-                config = YamlConfiguration.loadConfiguration(file);
-                config.load(file);
+                configuration = YamlConfiguration.loadConfiguration(file);
+                configuration.load(file);
                 reloadConfig();
             } else {
                 saveResource("config.yml", false);
-                config = YamlConfiguration.loadConfiguration(file);
+                configuration = YamlConfiguration.loadConfiguration(file);
                 logConsole("The 'config.yml' file successfully created!");
             }
         } catch (Throwable e) {
@@ -160,86 +197,10 @@ public class MainLoop extends JavaPlugin {
         }
     }
 
-    /*private void connectSql() {
-        if (config.getBoolean("mysql.use")) {
-            String url = "jdbc:mysql://" + config.getString("mysql.host")
-                    + ":" + config.getString("mysql.port")
-                    + "/" + config.getString("mysql.database");
-
-            try {
-                Class.forName("com.mysql.jdbc.Driver");
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                logConsole(Level.WARNING, "jdbc driver unavailable!");
-                return;
-            }
-
-            try {
-                connection = DriverManager.getConnection(url, config.getString("mysql.username"), config.getString("mysql.password"));
-                logConsole("Successfully connected to MySql.");
-            } catch (SQLException e) {
-                e.printStackTrace();
-                logConsole(Level.WARNING, "Connection to MySql failed.");
-            }
-        }
-    }
-
-    private void disconnectSql() {
-        if (config.getBoolean("mysql.use")) {
-            try {
-                if (connection != null && !connection.isClosed()) {
-                    connection.close();
-                }
-                logConsole("Successfully disconnected from MySql.");
-            } catch (Exception e) {
-                e.printStackTrace();
-                logConsole(Level.WARNING, "Disconnecting from MySql failed.");
-            }
-        }
-    }*/
-
-
-                    /*p.sendMessage(rawBlock.toString());
-                    String msg = rawBlock.toString();
-                    try {
-                        try {
-                            Class.forName("org.spigotmc.SpigotConfig");
-
-                            BaseComponent[] bc = ComponentSerializer.parse(msg);
-                            p.spigot().sendMessage(bc);
-                        } catch (ClassNotFoundException e) {
-                            String ver = Bukkit.getServer().getClass().getPackage().getName().replace(".", ",")
-                                    .split(",")[3];
-                            Object parsedMessage = Class
-                                    .forName("net.minecraft.server." + ver + ".IChatBaseComponent$ChatSerializer")
-                                    .getMethod("a", new Class[] { String.class }).invoke(null, new Object[] {
-                                            org.bukkit.ChatColor.translateAlternateColorCodes("&".charAt(0), msg) });
-                            Object packetPlayOutChat = Class.forName("net.minecraft.server." + ver + ".PacketPlayOutChat")
-                                    .getConstructor(new Class[] {
-                                            Class.forName("net.minecraft.server." + ver + ".IChatBaseComponent") })
-                                    .newInstance(new Object[] { parsedMessage });
-
-                            Object craftPlayer = Class.forName("org.bukkit.craftbukkit." + ver + ".entity.CraftPlayer")
-                                    .cast(p);
-                            Object craftHandle = Class.forName("org.bukkit.craftbukkit." + ver + ".entity.CraftPlayer")
-                                    .getMethod("getHandle", new Class[0]).invoke(craftPlayer, new Object[0]);
-                            Object playerConnection = Class.forName("net.minecraft.server." + ver + ".EntityPlayer")
-                                    .getField("playerConnection").get(craftHandle);
-
-                            Class.forName("net.minecraft.server." + ver + ".PlayerConnection")
-                                    .getMethod("sendPacket",
-                                            new Class[] { Class.forName("net.minecraft.server." + ver + ".Packet") })
-                                    .invoke(playerConnection, new Object[] { packetPlayOutChat });
-                        }
-                    } catch (Throwable e) {
-                        logConsole(Level.WARNING, "Invalid JSON format: " + msg);
-                        return;
-                    }*/
-
     private File getFolder() {
         File folder = getDataFolder();
-        if (!folder.exists()) {
-            folder.mkdir();
+        if (!folder.exists() && folder.mkdir()) {
+            logConsole("Folder recreated");
         }
         return folder;
     }

@@ -5,13 +5,6 @@ boss-bars:
   # The delay with which boss-bars are changed (in seconds)
   delay: 60
 
-  # The number of boss-bars (NOT ZERO)
-  number-of: 2
-
-  # IMPORTANT: each boss-bar must have a numerical ID from 1 to the total number of bars
-  # (which is defined in the field above)
-  # If you break this rule, you will get rak jyoppi
-  #
   # Possible color options:
   # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
   #
@@ -21,63 +14,58 @@ boss-bars:
   # Possible progress options:
   # real number from 0 to 1
 
-  1:
-    color: BLUE
-    segmented: SEGMENTED_6
-    progress: 1
-    text: '&6&lHello'
-
-  2:
-    color: RED
-    segmented: SEGMENTED_20
-    progress: 0.228
-    text: '&0&lGoodbye'
+  bars:
+    1:
+      color: BLUE
+      segmented: SEGMENTED_6
+      progress: 1
+      text: '&6&lHello'
+    2:
+      color: RED
+      segmented: SEGMENTED_20
+      progress: 0.228
+      text: '&0&lGoodbye'
 
 # Action-bars O_o
 action-bars:
 
   # The delay with which action-bars are displayed (in seconds)
-  delay: 2
+  delay: 60
 
-  # The number of action-bars (NOT ZERO)
-  number-of: 2
-
-  # IMPORTANT: each action-bar must have a numerical ID from 1 to the total number of bars
-  # (which is defined in the field above)
-  # If you break this rule, you will get speed yaichnika
-  #
-  # Possible color options:
-  # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
-
-  1:
-    text: 'kek'
-
-  2:
-    text: 'lol'
+  bars:
+    kek-bar:
+      text: 'kek'
+    lol-bar:
+      text: 'lol'
 
 # Chat messages X_X
 chat-messages:
 
   # The delay with which messages are printed in chat (in seconds)
-  delay: 2
+  delay: 10
 
-  # The number of messages (NOT ZERO)
-  number-of: 2
+  messages:
+    1:
+      raw: false
+      text:
+        - 'ds'
+    2:
+      raw: true
+      text:
+        - '<>&4sd <1,2>&l&6&love'
 
-  # IMPORTANT: each message must have a numerical ID from 1 to the total number of messages
-  # (which is defined in the field above)
-  # If you break this rule, you will get infarkt panosa
-
-  1:
-    text: 'ds'
-
-  2:
-    text: 'vk'
+  hover:
+    1: '&eGood'
+    2: '&eBad'
+  execute:
+    1: 'A| hubs'
+    2: 'U| http://hubsmc.ru'
+    3: 'E| help'
 
 periodic-feed:
   delay: 60
-  cmd-to-console: 'ecofeed'
-  cmd-to-player: 'tablo'
+  cmd-to-console: 'say no'
+  cmd-to-player: 'say yes'
 
 mysql:
   use: false
@@ -89,4 +77,4 @@ mysql:
   password: pass123
 
 # DO NOT CHANGE THIS!
-config-version: 2
+config-version: 3

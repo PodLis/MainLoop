@@ -76,6 +76,24 @@ public class ConfigUtilities {
         return doubles;
     }
 
+    public static int[] getIntegers(ConfigurationSection section, String parameter) {
+
+        if (section == null) {
+            return new int[] {0};
+        }
+
+        String[] keys = section.getKeys(false).toArray(new String[0]);
+        MemorySection[] memorySections = new MemorySection[keys.length];
+        int[] integers = new int[keys.length];
+
+        for (int i = 0; i < keys.length; i++) {
+            memorySections[i] = (MemorySection) section.getValues(false).get(keys[i]);
+            integers[i] = memorySections[i].getInt(parameter);
+        }
+
+        return integers;
+    }
+
     public static boolean[] getBooleans(ConfigurationSection section, String parameter) {
 
         if (section == null) {

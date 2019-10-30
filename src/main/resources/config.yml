@@ -34,8 +34,10 @@ action-bars:
 
   bars:
     kek-bar:
+      stand-time: 5
       text: 'kek'
     lol-bar:
+      stand-time: 3
       text: 'lol'
 
 # Chat messages X_X
@@ -77,4 +79,4 @@ mysql:
   password: pass123
 
 # DO NOT CHANGE THIS!
-config-version: 3
+config-version: 4

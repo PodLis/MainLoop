@@ -8,11 +8,13 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.logging.Level;
 
 public class MainLoop extends JavaPlugin {
@@ -22,9 +24,13 @@ public class MainLoop extends JavaPlugin {
     private char actionBar_counter;
     private char chatMessage_counter;
 
+    private int actionBar_stand_seconds;
+    private ActionBar currentActionBar;
+
     private FileConfiguration configuration;
     private File file;
     private BukkitScheduler scheduler;
+    private Collection<? extends Player> players;
 
     private ArrayList<HubsBar> bossBars;
     private ArrayList<ActionBar> actionBars;
@@ -73,6 +79,10 @@ public class MainLoop extends JavaPlugin {
         actionBar_counter = Character.MAX_VALUE;
         chatMessage_counter = Character.MAX_VALUE;
 
+        actionBar_stand_seconds = 0;
+        currentActionBar = null;
+        players = Bukkit.getOnlinePlayers();
+
         int bossBar_mark = configuration.getInt("boss-bars.delay");
         int actionBar_mark = configuration.getInt("action-bars.delay");
         int chatMessage_mark = configuration.getInt("chat-messages.delay");
@@ -82,24 +92,34 @@ public class MainLoop extends JavaPlugin {
 
         scheduler.scheduleSyncRepeatingTask(this, () -> {
 
+            players = Bukkit.getOnlinePlayers();
+
             if (loop_counter % bossBar_mark == 0) {
                 bossBars.get(bossBar_counter % bossBars.size()).clean();
                 bossBar_counter++;
-                bossBars.get(bossBar_counter % bossBars.size()).send(Bukkit.getOnlinePlayers());
+                bossBars.get(bossBar_counter % bossBars.size()).send(players);
             }
+
+            if (actionBar_stand_seconds > 0 && currentActionBar != null) {
+                currentActionBar.send(players);
+                actionBar_stand_seconds--;
+            }
+
             if (loop_counter % actionBar_mark == 0) {
                 actionBar_counter++;
-                actionBars.get(actionBar_counter % actionBars.size()).send(Bukkit.getOnlinePlayers());
+                currentActionBar = actionBars.get(actionBar_counter % actionBars.size());
+                currentActionBar.send(players);
+                actionBar_stand_seconds = currentActionBar.getExtraDisplayTime();
             }
 
             if (loop_counter % chatMessage_mark == 0) {
                 chatMessage_counter++;
-                chatMessages.get(chatMessage_counter % chatMessages.size()).send(Bukkit.getOnlinePlayers());
+                chatMessages.get(chatMessage_counter % chatMessages.size()).send(players);
             }
 
             if (loop_counter % feed_mark == 0) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), consoleFeedCommand);
-                playerFeedCommand.send(Bukkit.getOnlinePlayers());
+                playerFeedCommand.send(players);
             }
 
             loop_counter++;
@@ -139,9 +159,10 @@ public class MainLoop extends JavaPlugin {
 
         //action-bars
         String[] actionTexts = ConfigUtilities.getStrings(configuration.getConfigurationSection("action-bars.bars"), "text");
+        int[] actionStandTimes = ConfigUtilities.getIntegers(configuration.getConfigurationSection("action-bars.bars"), "stand-time");
         actionBars = new ArrayList<>();
-        for (String text : actionTexts) {
-            actionBars.add(new ActionBar(replaceSymbolsAndNull(text)));
+        for (int i = 0; i < actionTexts.length; i++) {
+            actionBars.add(new ActionBar(replaceSymbolsAndNull(actionTexts[i]), actionStandTimes[i]));
         }
 
         //chat-messages

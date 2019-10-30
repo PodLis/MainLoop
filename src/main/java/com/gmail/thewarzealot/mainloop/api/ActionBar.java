@@ -12,8 +12,15 @@ public class ActionBar implements ToPlayerSendable{
 
     private PacketPlayOutChat packet;
 
-    public ActionBar(String message) {
+    private int displayTime;
+
+    public int getExtraDisplayTime() {
+        return displayTime - 3;
+    }
+
+    public ActionBar(String message, int displayTime) {
         packet = new PacketPlayOutChat(ChatSerializer.a("{\"text\":\"" + message + "\"}"), ChatMessageType.GAME_INFO);
+        this.displayTime = Math.max(displayTime, 3);
     }
 
     @Override
@@ -22,6 +29,4 @@ public class ActionBar implements ToPlayerSendable{
             ((CraftPlayer)player).getHandle().playerConnection.sendPacket(packet);
         }
     }
-
-
 }
